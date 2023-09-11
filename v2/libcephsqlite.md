@@ -43,3 +43,21 @@
 3. demo.sqlite的mon权限为"allow rwx pool=demo.sqlite", 这个权限允许用户进行读取写入执行的权限, 并且将用户限制于刚才新创建的存储池demo.sqlite
 
 点击创建即可
+
+## 客户端配置
+
+### 安装本地工具:
+
+软件源需求: 包含需要的基础BaseOS和AppStream仓库,以及Ceph的仓库
+
+要安装的包ceph,sqlite,libcephsqlite
+
+```
+[root@manager-node-114514 ~]# dnf repolist
+repo id                                       repo name
+appstream                                     AlmaLinux AppStream
+baseos                                        AlmaLinux BaseOS
+ceph-noarch                                   Ceph (noarch)
+ceph-x86_64                                   Ceph (x86_64)
+[root@manager-node-114514 ~]# dnf install ceph sqlite libcephsqlite -y
+```
