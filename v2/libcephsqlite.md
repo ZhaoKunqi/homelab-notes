@@ -50,8 +50,6 @@
 
 软件源需求: 包含需要的基础BaseOS和AppStream仓库,以及Ceph的仓库
 
-要安装的包ceph,sqlite,libcephsqlite
-
 ```
 [root@manager-node-114514 ~]# dnf repolist
 repo id                                       repo name
@@ -59,5 +57,39 @@ appstream                                     AlmaLinux AppStream
 baseos                                        AlmaLinux BaseOS
 ceph-noarch                                   Ceph (noarch)
 ceph-x86_64                                   Ceph (x86_64)
+```
+
+安装要用到的包: ceph sqlite libcephsqlite
+
+```
 [root@manager-node-114514 ~]# dnf install ceph sqlite libcephsqlite -y
 ```
+
+### 获得Ceph的配置文件和用户密钥串
+
+* /etc/ceph.conf(Ceph配置文件, 包含集群的链接信息等, 不包含用户验证密钥串)
+
+  直接从Ceph集群里获取即可，从Ceph服务器的/etc/ceph.conf拷贝到本地的/etc/ceph.conf即可
+
+* /etc/ceph/ceph.client.demo.sqlite.keyring(Ceph用户demo.sqlite的用户验证密钥串)
+
+  可以在服务端使用'ceph auth get demo.sqlite'来获取
+
+  此处为了更直观表达，使用Ceph-Dashboard提供的WebUI来导出这个用户的keyring文件
+  
+  ![Image Description](images/libcephsqlite-demo03.jpg)
+
+  步骤如下:
+
+  1. 选中用户
+ 
+  2. 点击下拉菜单
+ 
+  3. 导出用户
+ 
+  4. 拷贝Keyring内容
+ 
+  将拷贝的内容复制到/etc/ceph/ceph.client.demo.sqlite.keyring内即可
+
+## 开始使用
+  
