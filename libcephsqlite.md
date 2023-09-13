@@ -93,3 +93,119 @@ ceph-x86_64                                   Ceph (x86_64)
 
 ## 开始使用
   
+### 使用sqlite3工具访问数据库
+
+先确定Ceph配置文件和用户Keyring文件都存在
+
+```
+[root@manager-node-114514 ~]# ls /etc/ceph/ceph.conf 
+/etc/ceph/ceph.conf
+[root@manager-node-114514 ~]# ls /etc/ceph/ceph.client.demo.sqlite.keyring 
+/etc/ceph/ceph.client.demo.sqlite.keyring
+[root@manager-node-114514 ~]#
+```
+
+设置环境变量
+
+```
+[root@manager-node-114514 ~]# export CEPH_CONF=/etc/ceph/ceph.conf
+[root@manager-node-114514 ~]# export CEPH_KEYRING=/etc/ceph/ceph.client.demo.sqlite.keyring
+[root@manager-node-114514 ~]# export CEPH_ARGS='--id demo.sqlite'
+```
+
+打开sqlite终端
+
+```
+[root@manager-node-114514 ~]# sqlite3 
+SQLite version 3.34.1 2021-01-20 14:10:07
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+sqlite>
+```
+
+令sqlite加载libcephsqlite.so库
+
+```
+sqlite> .load libcephsqlite.so
+```
+
+令sqlite加载在Ceph RADOS中的数据库文件
+
+```
+sqlite> .open file:///demo.sqlite:/database.db?vfs=ceph
+```
+
+查询Ceph自带的内容(Ceph内建性能反馈)来确保已经连接到Ceph的SQLite数据库
+
+```
+sqlite> SELECT ceph_perf();
+{"libcephsqlite_vfs":{"op_open":{"avgcount":1,"sum":0.069001164,"avgtime":0.069001164},"op_delete":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"op_access":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"op_fullpathname":{"avgcount":1,"sum":0.064001080,"avgtime":0.064001080},"op_currenttime":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_close":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_read":{"avgcount":1,"sum":0.003000050,"avgtime":0.003000050},"opf_write":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_truncate":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_sync":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_filesize":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_lock":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_unlock":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_checkreservedlock":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_filecontrol":{"avgcount":2,"sum":0.000000000,"avgtime":0.000000000},"opf_sectorsize":{"avgcount":0,"sum":0.000000000,"avgtime":0.000000000},"opf_devicecharacteristics":{"avgcount":3,"sum":0.000000000,"avgtime":0.000000000}},"libcephsqlite_striper":{"update_metadata":0,"update_allocated":0,"update_size":0,"update_version":0,"shrink":0,"shrink_bytes":0,"lock":0,"unlock":0}}
+sqlite>
+```
+
+创建一个名为user的表，并且存储一些数据进去
+
+```
+sqlite> CREATE TABLE user (
+    uid INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    password TEXT NOT NULL
+);
+sqlite> INSERT INTO user (uid, name, password) VALUES (1, 'administrator', '114514');
+sqlite> INSERT INTO user (uid, name, password) VALUES (2, 'demo', '1919810');
+sqlite> INSERT INTO user (uid, name, password) VALUES (3, 'default_user', 'user_password');
+sqlite>
+```
+
+查询一下刚刚存储进去的数据
+
+```
+sqlite> SELECT * FROM user;
+1|administrator|114514
+2|demo|1919810
+3|default_user|user_password
+sqlite>
+```
+
+退出sqlite终端，重新连接，查看数据是否存在
+
+```
+[root@manager-node-114514 ~]# sqlite3 
+SQLite version 3.34.1 2021-01-20 14:10:07
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+sqlite> .load libcephsqlite.so
+sqlite> .open file:///demo.sqlite:/database.db?vfs=ceph
+sqlite> .tables
+user
+sqlite> SELECT * FROM user;
+1|administrator|114514
+2|demo|1919810
+3|default_user|user_password
+sqlite>
+```
+
+尝试写入大量数据并且通过Ceph 网页面板监控写入操作
+
+写入10行数据
+
+```
+INSERT INTO user (uid, name, password) VALUES (4, 'user1', 'password1');
+INSERT INTO user (uid, name, password) VALUES (5, 'user2', 'password2');
+INSERT INTO user (uid, name, password) VALUES (6, 'user3', 'password3');
+INSERT INTO user (uid, name, password) VALUES (7, 'user4', 'password4');
+INSERT INTO user (uid, name, password) VALUES (8, 'user5', 'password5');
+INSERT INTO user (uid, name, password) VALUES (9, 'user6', 'password6');
+INSERT INTO user (uid, name, password) VALUES (10, 'user7', 'password7');
+INSERT INTO user (uid, name, password) VALUES (11, 'user8', 'password8');
+INSERT INTO user (uid, name, password) VALUES (12, 'user9', 'password9');
+INSERT INTO user (uid, name, password) VALUES (13, 'user10', 'password10');
+```
+
+写入后，在Ceph网页-Pool里查看，会发现有写入数据和写入速度的波动
+
+![Image Description](images/libcephsqlite-demo04.jpg)
+
+如此可以确定Ceph SQLite VFS提供的SQLite服务是可以正常使用的，实验成功。
